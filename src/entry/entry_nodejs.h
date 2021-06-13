@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <dlfcn.h>
 #include<stdio.h>
 
@@ -25,6 +26,8 @@
 namespace polylux {
 namespace entry {
 namespace nodejs {
+extern void *function_table_void;
+
 struct napi_value;
 
 
@@ -71,7 +74,84 @@ struct napi_module {
   void *reserved[4];
 };
 
-extern "C" inline napi_value* napi_register_module_v1(void* env, napi_value* exports) {
+typedef napi_value* (*napi_callback)(void *env, void *callback_info);
+
+template <std::size_t I, typename function_table_t>
+napi_value* wrapper_function(void *env, void *callback_info) {
+	  function_table_t *ft =
+      reinterpret_cast<function_table_t *>(function_table_void);
+  (*ft)[I].f();
+
+  return nullptr;
+}
+
+template <typename function_table_t> class register_functions {
+  void *env;
+  napi_value *result;
+  const function_table_t &function_table;
+
+public:
+  register_functions(void *env, napi_value *result,
+                     const function_table_t &function_table)
+      : env{env}, result{result}, function_table{function_table} {}
+
+  template <std::size_t I> napi_value *recurse() {
+    recurse<I - 1>();
+
+    // TODO yikes, copied from below!
+    using napi_get_laste_error_info_t =
+        napi_status (*)(void *env, const napi_extended_error_info **result);
+    auto napi_get_last_error_info =
+        (napi_get_laste_error_info_t)dlsym(nullptr, "napi_get_last_error_info");
+
+    using napi_is_exception_pending_t =
+        napi_status (*)(void *env, bool *result);
+    auto napi_is_exception_pending = (napi_is_exception_pending_t)dlsym(
+        nullptr, "napi_is_exception_pending");
+
+    using napi_throw_error_t =
+        napi_status (*)(void *env, const char *code, const char *msg);
+    auto napi_throw_error =
+        (napi_throw_error_t)dlsym(nullptr, "napi_throw_error");
+
+    using napi_create_object_t =
+        napi_status (*)(void *env, napi_value **result);
+    auto napi_create_object =
+        (napi_create_object_t)dlsym(nullptr, "napi_create_object");
+
+    using napi_create_function_t =
+        napi_status (*)(void *env, const char *utf8name, size_t length,
+                        napi_callback cb, void *data, napi_value **result);
+    auto napi_create_function =
+        (napi_create_function_t)dlsym(nullptr, "napi_create_function");
+
+    using napi_set_named_property_t = napi_status (*)(
+        void *env, napi_value *object, const char *utf8Name, napi_value *value);
+    auto napi_set_named_property =
+        (napi_set_named_property_t)dlsym(nullptr, "napi_set_named_property");
+
+    napi_value *exported_function;
+    NAPI_CALL(env,
+              napi_create_function(env, function_table[I - 1].name, SIZE_MAX,
+                                   &wrapper_function<I - 1, function_table_t>,
+                                   NULL, &exported_function));
+
+    NAPI_CALL(env,
+              napi_set_named_property(env, result, function_table[I - 1].name,
+                                      exported_function));
+
+    // TODO error handling!
+    return nullptr;
+  }
+
+  template <> napi_value* recurse<0>() { return nullptr; }
+};
+
+
+
+template<typename function_table_t>
+napi_value* napi_register_module_v1_cpp(void* env, napi_value* exports) {
+  // TODO build some nice abstraction ...
   using napi_get_laste_error_info_t =
       napi_status (*)(void *env, const napi_extended_error_info **result);
   auto napi_get_last_error_info =
@@ -87,12 +167,40 @@ extern "C" inline napi_value* napi_register_module_v1(void* env, napi_value* exp
 
   using napi_create_object_t = napi_status (*)(void *env, napi_value **result);
   auto napi_create_object = (napi_create_object_t)dlsym(nullptr, "napi_create_object");
+
+  using napi_create_function_t =
+      napi_status (*)(void *env, const char *utf8name, size_t length,
+                      napi_callback cb, void *data, napi_value **result);
+  auto napi_create_function =
+      (napi_create_function_t)dlsym(nullptr, "napi_create_function");
+
+  using napi_set_named_property_t = napi_status (*)(
+      void *env, napi_value *object, const char *utf8Name, napi_value *value);
+  auto napi_set_named_property =
+      (napi_set_named_property_t)dlsym(nullptr, "napi_set_named_property");
+
   napi_value *result;
   NAPI_CALL(env, napi_create_object(env, &result));
+
+  function_table_t *ft =
+      reinterpret_cast<function_table_t *>(function_table_void);
+
+  polylux::entry::nodejs::register_functions<function_table_t>
+      register_functions{env, result, *ft};
+  register_functions
+      .template recurse<std::tuple_size<function_table_t>::value>();
+
   return result;
 }
 
-static napi_module module = {1,       0,      __FILE__, &napi_register_module_v1, nullptr,
+inline napi_value* (*napi_register_module_v1_cpp_ptr)(void* env, napi_value* exports) = nullptr;
+
+extern "C" inline
+napi_value* napi_register_module_v1_externc(void* env, napi_value* exports) {
+  return napi_register_module_v1_cpp_ptr(env, exports);
+}
+
+static napi_module module = {1,       0,      __FILE__, &napi_register_module_v1_externc, nullptr,
                              nullptr, nullptr};
 
 inline void module_entry() {
@@ -111,16 +219,22 @@ inline void module_entry() {
 #define POLYLUX_ENTRY_NODEJS(module_name, function_table)                      \
   namespace polylux {                                                          \
   namespace entry {                                                            \
-  namespace nodejs {}                                                          \
+  namespace nodejs {                                                           \
+  inline void *function_table_void = &function_table;                          \
+  }                                                                            \
   }                                                                            \
   }                                                                            \
                                                                                \
   extern "C" {                                                                 \
-  static void polylux_entry_nodejs(void) __attribute__((constructor));      \
+  static void polylux_entry_nodejs(void) __attribute__((constructor));         \
                                                                                \
-  static void polylux_entry_nodejs(void) {                                  \
-    polylux::entry::nodejs::module.nm_modname = #module_name;                  \
-    polylux::entry::nodejs::module_entry();                                 \
+  static void polylux_entry_nodejs(void) {                                     \
+    namespace pen = polylux::entry::nodejs;                                    \
+    pen::module.nm_modname = #module_name;                                     \
+    pen::napi_register_module_v1_cpp_ptr =                                     \
+        pen::napi_register_module_v1_cpp<decltype(function_table)>;            \
+                                                                               \
+    pen::module_entry();                                                       \
   }                                                                            \
   }
 
