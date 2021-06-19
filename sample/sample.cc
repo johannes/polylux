@@ -1,6 +1,4 @@
-#include "../src/entry/entry.h"
-
-#include "../src/polylux.h"
+#include "polylux.h"
 
 #include <iostream>
 

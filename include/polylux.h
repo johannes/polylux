@@ -1,18 +1,10 @@
 #pragma once
 
-namespace polylux {
-struct info {
-  const char *name;
-  const char *version_str;
-};
-} // namespace polylux
+#include "polylux/main.h"
 
-extern const polylux::info polylux_info;
-
-// TODO: this header should be split, right now it is recursively including itself  via these:
-#include "entry_python.h"
-#include "entry_php.h"
-#include "entry_nodejs.h"
+#include "polylux/entry_python.h"
+#include "polylux/entry_php.h"
+#include "polylux/entry_nodejs.h"
 
 #define POLYLUX_ENTRY(name, version_str, function_table)                       \
   const polylux::info polylux_info{#name, version_str};                        \

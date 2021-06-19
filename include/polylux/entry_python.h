@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <dlfcn.h>
 
-#include "../polylux.h"
+#include "polylux/main.h"
 
 struct PyObject;
 
@@ -30,10 +30,10 @@ public:
 
   bool as_bool(size_t offset) const override;
   long as_long(size_t offset) const override;
-  double as_double(size_t /*offset*/) const override;
-  std::string_view as_string(size_t /*offset*/) const override;
+  double as_double(size_t offset) const override;
+  std::string_view as_string(size_t offset) const override;
 
-  void *raw(size_t /*offset*/) const override;
+  void *raw(size_t offset) const override;
 };
 
 extern void *function_table_void;

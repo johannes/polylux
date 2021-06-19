@@ -50,4 +50,10 @@ struct named_function {
    };
    template <size_t N> using function_table_t = std::array<named_function, N>;
 
+struct info {
+  const char *name;
+  const char *version_str;
+};
+
+extern const polylux::info polylux_info;
 } // namespace polylux

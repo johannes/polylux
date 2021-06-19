@@ -1,8 +1,7 @@
 #include <dlfcn.h>
 #include <iostream>
 
-#include "entry.h"
-#include "../backend/backend_php.h"
+#include "polylux/entry_php.h"
 
 struct zend_module_entry {
 	unsigned short size;

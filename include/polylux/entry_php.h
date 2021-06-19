@@ -1,10 +1,8 @@
 #pragma once
 
-#include "entry.h"
-
 #include <cstdint>
 
-#include "../polylux.h"
+#include "polylux/main.h"
 
 struct zend_module_entry;
 

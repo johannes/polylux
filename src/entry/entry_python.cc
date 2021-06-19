@@ -1,5 +1,4 @@
-#include "entry.h"
-#include "entry_python.h"
+#include "polylux/entry_python.h"
 
 #include <iostream>
 

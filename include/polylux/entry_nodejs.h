@@ -3,7 +3,7 @@
 #include <array>
 #include <dlfcn.h>
 
-#include "../polylux.h"
+#include "polylux/main.h"
 
 #define NAPI_CALL(env, call)                                      \
   do {                                                            \
