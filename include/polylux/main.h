@@ -4,9 +4,23 @@
 #include <string_view>
 
 namespace polylux {
+
+// TODO: return_value_wrapper and argument_wrapper have to be merged in order to
+// be able to support arrays/lists etc. and doing anything interesting.
+class return_value_wrapper {
+public:
+  virtual ~return_value_wrapper() = default;
+
+  // TODO: Do I /really/ want to use operator= here?
+  virtual bool operator=(bool value) = 0;
+  virtual long operator=(long value) = 0;
+  virtual double operator=(double value) = 0;
+  virtual std::string_view operator=(std::string_view value) = 0;
+};
+
 class argument_list_wrapper;
 
-class argument_wrapper {
+class argument_wrapper final {
    const argument_list_wrapper &args;
    size_t  offset;
 
@@ -43,7 +57,9 @@ public:
   virtual void *raw(size_t offset) const = 0;
 };
 
-using function = void (*)(const argument_list_wrapper &args);
+using function = void (*)(return_value_wrapper &return_value,
+                          const argument_list_wrapper &args);
+
 struct named_function {
   const char *name;
   function f;

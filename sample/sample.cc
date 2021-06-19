@@ -3,39 +3,34 @@
 #include <iostream>
 
 namespace {
-void hello(const polylux::argument_list_wrapper & /*args*/) {
-  std::cout << "hello ";
-}
-void world(const polylux::argument_list_wrapper &args) {
-  std::cout << "world (called with " << args.count()
-            << " args, first arg as long: " << args[0].as_long() << ")\n";
+void negate(polylux::return_value_wrapper & return_value,
+                 const polylux::argument_list_wrapper &args) {
+  return_value = !args[0].as_bool();
 }
 
-void handle_bool(const polylux::argument_list_wrapper &args) {
-  std::cout << "bool value: " << args[0].as_bool() << "\n";
+void square(polylux::return_value_wrapper &return_value,
+            const polylux::argument_list_wrapper &args) {
+  long value = args[0].as_long();
+  return_value = value * value;
 }
 
-void handle_long(const polylux::argument_list_wrapper &args) {
-  std::cout << "long value: " << args[0].as_long() << "\n";
+void half(polylux::return_value_wrapper &return_value,
+          const polylux::argument_list_wrapper &args) {
+  return_value = args[0].as_double() / 2.;
 }
 
-void handle_double(const polylux::argument_list_wrapper &args) {
-  std::cout << "double value: " << args[0].as_double() << "\n";
+void greet(polylux::return_value_wrapper &return_value,
+           const polylux::argument_list_wrapper &args) {
+  std::string greeting{"Hello "};
+  greeting += args[0].as_string();
+  return_value = std::string_view{greeting};
 }
 
-void handle_string(const polylux::argument_list_wrapper &args) {
-  std::cout << "string value: " << args[0].as_string() << "\n";
-}
-
-polylux::function_table_t<6> function_table{
-    polylux::named_function{"hello", hello},
-    polylux::named_function{"world", world},
-
-    polylux::named_function{"handle_bool", handle_bool},
-    polylux::named_function{"handle_long", handle_long},
-    polylux::named_function{"handle_double", handle_double},
-    polylux::named_function{"handle_string", handle_string}
-};
+polylux::function_table_t<4> function_table{
+    polylux::named_function{"negate", negate},
+    polylux::named_function{"square", square},
+    polylux::named_function{"half", half},
+    polylux::named_function{"greet", greet}};
 } // namespace
 
 POLYLUX_ENTRY(polylux_demo, "1.0.0", function_table)

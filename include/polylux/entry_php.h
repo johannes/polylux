@@ -27,6 +27,13 @@ extern zend_function_entry* fill_function_table();
 extern void *function_table_void;
 
 namespace {
+class return_value_wrapper : public polylux::return_value_wrapper {
+  bool operator=(bool value) override {   return value;}
+  long operator=(long value) override { return value; }
+  double operator=(double value) override { return value; }
+  std::string_view operator=(std::string_view value) override { return value; }
+};
+
 class argument_list_wrapper : public polylux::argument_list_wrapper {
 	public:
   size_t count() const override { return 0; };
@@ -44,9 +51,10 @@ void wrapper_function(void * /*execute_data*/, void * /*return_value*/) {
   function_table_t *ft =
       reinterpret_cast<function_table_t *>(function_table_void);
 
+  return_value_wrapper return_value{};
   argument_list_wrapper args{};
 
-  (*ft)[I].f(args);
+  (*ft)[I].f(return_value, args);
 }
 
 template <typename function_table_t> class fill_table {

@@ -45,17 +45,44 @@ PyObject *PyModule_Create2(struct PyModuleDef *, int apiver);
 extern Py_ssize_t PyTuple_Size(PyObject *);
 extern PyObject* PyTuple_GetItem(PyObject *p, Py_ssize_t pos);
 
+extern PyObject* PyBool_FromLong(long v);
+
+extern PyObject* PyLong_FromLong(long v);
 extern long PyLong_AsLong(PyObject *obj);
+
+extern PyObject* PyFloat_FromDouble(double v);
 extern double PyFloat_AsDouble(PyObject *obj);
 
 extern int PyObject_IsTrue(PyObject *);
 
+extern PyObject* PyUnicode_FromStringAndSize(const char *u, Py_ssize_t size);
 const char* PyUnicode_AsUTF8AndSize(PyObject *unicode, Py_ssize_t *size);
 }
 
 namespace polylux {
 namespace entry {
 namespace python {
+
+PyObject *return_value_wrapper::value() const { return pyrv; }
+
+bool  return_value_wrapper::operator=(bool value) {
+  pyrv = PyBool_FromLong(value);
+  return value;
+}
+
+long return_value_wrapper::operator=(long value) {
+  pyrv = PyLong_FromLong(value);
+  return value;
+}
+
+double return_value_wrapper::operator=(double value) {
+  pyrv = PyFloat_FromDouble(value);
+  return value;
+}
+std::string_view return_value_wrapper::operator=(std::string_view value) {
+  pyrv = PyUnicode_FromStringAndSize(value.data(), value.size());
+  return value;
+}
 
 size_t argument_list_wrapper::count() const {
   return PyTuple_Size(argtuple);

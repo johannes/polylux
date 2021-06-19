@@ -20,6 +20,19 @@ struct PyMethodDef {
 
 PyObject *init(PyMethodDef *methods);
 
+class return_value_wrapper final : public polylux::return_value_wrapper {
+  PyObject *pyrv = nullptr;
+
+public:
+  explicit return_value_wrapper() = default;
+  PyObject *value() const;
+
+  bool operator=(bool value) override;
+  long operator=(long value) override;
+  double operator=(double value) override;
+  std::string_view operator=(std::string_view value) override;
+};
+
 class argument_list_wrapper : public polylux::argument_list_wrapper {
   PyObject *argtuple;
 
@@ -43,10 +56,11 @@ PyObject * wrapper_function(PyObject * /*self*/, PyObject * pyargs) {
   function_table_t *ft =
       reinterpret_cast<function_table_t *>(function_table_void);
 
+  return_value_wrapper return_value{};
   argument_list_wrapper args{pyargs};
 
-  (*ft)[I].f(args);
-  return (PyObject*)dlsym(nullptr, "_Py_TrueStruct");
+  (*ft)[I].f(return_value, args);
+  return return_value.value();
 }
 
 template <typename function_table_t> class fill_table {
