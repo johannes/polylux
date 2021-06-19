@@ -38,14 +38,57 @@ typedef struct PyModuleDef{
   freefunc m_free;
 } PyModuleDef;
 
+using Py_ssize_t = ssize_t;
 
-extern "C" PyObject * PyModule_Create2(struct PyModuleDef*,
-                                     int apiver);
+extern "C" {
+PyObject *PyModule_Create2(struct PyModuleDef *, int apiver);
 
+extern Py_ssize_t PyTuple_Size(PyObject *);
+extern PyObject* PyTuple_GetItem(PyObject *p, Py_ssize_t pos);
+
+extern long PyLong_AsLong(PyObject *obj);
+extern double PyFloat_AsDouble(PyObject *obj);
+
+extern int PyObject_IsTrue(PyObject *);
+
+const char* PyUnicode_AsUTF8AndSize(PyObject *unicode, Py_ssize_t *size);
+}
 
 namespace polylux {
 namespace entry {
 namespace python {
+
+size_t argument_list_wrapper::count() const {
+  return PyTuple_Size(argtuple);
+};
+
+bool argument_list_wrapper::as_bool(size_t offset) const {
+  PyObject *arg = PyTuple_GetItem(argtuple, offset);
+  return PyObject_IsTrue(arg);
+}
+
+long argument_list_wrapper::as_long(size_t offset) const {
+  PyObject * arg = PyTuple_GetItem(argtuple, offset);
+  return PyLong_AsLong(arg);
+}
+
+double argument_list_wrapper::as_double(size_t offset) const {
+  PyObject * arg = PyTuple_GetItem(argtuple, offset);
+  return PyFloat_AsDouble(arg);
+}
+
+std::string_view argument_list_wrapper::as_string(size_t offset) const {
+  PyObject *arg = PyTuple_GetItem(argtuple, offset);
+
+  Py_ssize_t len;
+  const char *s = PyUnicode_AsUTF8AndSize(arg, &len);
+  return {s, static_cast<size_t>(len)};
+}
+
+void *argument_list_wrapper::raw(size_t offset) const {
+  PyObject *arg = PyTuple_GetItem(argtuple, offset);
+  return arg;
+}
 
 static PyModuleDef py_module{};
 

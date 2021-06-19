@@ -2,7 +2,8 @@
 
 #include <array>
 #include <dlfcn.h>
-#include<stdio.h>
+
+#include "../polylux.h"
 
 #define NAPI_CALL(env, call)                                      \
   do {                                                            \
@@ -76,11 +77,25 @@ struct napi_module {
 
 typedef napi_value* (*napi_callback)(void *env, void *callback_info);
 
+class argument_list_wrapper : public polylux::argument_list_wrapper {
+	public:
+  size_t count() const override { return 0; };
+
+  bool as_bool(size_t /*offset*/) const override { return false; }
+  long as_long(size_t /*offset*/) const override { return 1; }
+  double as_double(size_t /*offset*/) const override { return .1; }
+  std::string_view as_string(size_t /*offset*/) const override { return {"FOOBAR", 6}; }
+
+  void *raw(size_t /*offset*/) const override { return nullptr; }
+};
+
 template <std::size_t I, typename function_table_t>
-napi_value* wrapper_function(void *env, void *callback_info) {
-	  function_table_t *ft =
-      reinterpret_cast<function_table_t *>(function_table_void);
-  (*ft)[I].f();
+napi_value *wrapper_function(void * /*env*/, void * /*callback_info*/) {
+  function_table_t &ft =
+      *reinterpret_cast<function_table_t *>(function_table_void);
+
+  argument_list_wrapper args{};
+  ft[I].f(args);
 
   return nullptr;
 }
@@ -150,7 +165,7 @@ public:
 
 
 template<typename function_table_t>
-napi_value* napi_register_module_v1_cpp(void* env, napi_value* exports) {
+napi_value* napi_register_module_v1_cpp(void* env, napi_value* /*exports*/) {
   // TODO build some nice abstraction ...
   using napi_get_laste_error_info_t =
       napi_status (*)(void *env, const napi_extended_error_info **result);
@@ -200,8 +215,9 @@ napi_value* napi_register_module_v1_externc(void* env, napi_value* exports) {
   return napi_register_module_v1_cpp_ptr(env, exports);
 }
 
-static napi_module module = {1,       0,      __FILE__, &napi_register_module_v1_externc, nullptr,
-                             nullptr, nullptr};
+static napi_module module = {
+    1,       0,       __FILE__, &napi_register_module_v1_externc,
+    nullptr, nullptr, nullptr};
 
 inline void module_entry() {
   auto napi_module_register =
@@ -221,9 +237,6 @@ inline void module_entry() {
   namespace entry {                                                            \
   namespace nodejs {                                                           \
   inline void *function_table_void = &function_table;                          \
-  }                                                                            \
-  }                                                                            \
-  }                                                                            \
                                                                                \
   extern "C" {                                                                 \
   static void polylux_entry_nodejs(void) __attribute__((constructor));         \
@@ -235,6 +248,9 @@ inline void module_entry() {
         pen::napi_register_module_v1_cpp<decltype(function_table)>;            \
                                                                                \
     pen::module_entry();                                                       \
+  }                                                                            \
+  }                                                                            \
+  }                                                                            \
   }                                                                            \
   }
 

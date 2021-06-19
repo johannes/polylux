@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <dlfcn.h>
 
+#include "../polylux.h"
+
 struct PyObject;
 
 namespace polylux {
@@ -18,13 +20,32 @@ struct PyMethodDef {
 
 PyObject *init(PyMethodDef *methods);
 
+class argument_list_wrapper : public polylux::argument_list_wrapper {
+  PyObject *argtuple;
+
+public:
+  explicit argument_list_wrapper(PyObject *argtuple) : argtuple{argtuple} {}
+
+  size_t count() const override;
+
+  bool as_bool(size_t offset) const override;
+  long as_long(size_t offset) const override;
+  double as_double(size_t /*offset*/) const override;
+  std::string_view as_string(size_t /*offset*/) const override;
+
+  void *raw(size_t /*offset*/) const override;
+};
+
 extern void *function_table_void;
 
 template <std::size_t I, typename function_table_t>
-PyObject * wrapper_function(PyObject * /*self*/, PyObject * /*args */) {
+PyObject * wrapper_function(PyObject * /*self*/, PyObject * pyargs) {
   function_table_t *ft =
       reinterpret_cast<function_table_t *>(function_table_void);
-  (*ft)[I].f();
+
+  argument_list_wrapper args{pyargs};
+
+  (*ft)[I].f(args);
   return (PyObject*)dlsym(nullptr, "_Py_TrueStruct");
 }
 

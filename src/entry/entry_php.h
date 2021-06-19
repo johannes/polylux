@@ -4,6 +4,8 @@
 
 #include <cstdint>
 
+#include "../polylux.h"
+
 struct zend_module_entry;
 
 namespace polylux {
@@ -27,11 +29,26 @@ extern zend_function_entry* fill_function_table();
 extern void *function_table_void;
 
 namespace {
+class argument_list_wrapper : public polylux::argument_list_wrapper {
+	public:
+  size_t count() const override { return 0; };
+
+  bool as_bool(size_t /*offset*/) const override { return false; }
+  long as_long(size_t /*offset*/) const override { return 1; }
+  double as_double(size_t /*offset*/) const override { return .1; }
+  std::string_view as_string(size_t /*offset*/) const override { return {"FOOBAR", 6 }; }
+
+  void *raw(size_t /*offset*/) const override { return nullptr; }
+};
+
 template <std::size_t I, typename function_table_t>
 void wrapper_function(void * /*execute_data*/, void * /*return_value*/) {
   function_table_t *ft =
       reinterpret_cast<function_table_t *>(function_table_void);
-  (*ft)[I].f();
+
+  argument_list_wrapper args{};
+
+  (*ft)[I].f(args);
 }
 
 template <typename function_table_t> class fill_table {
