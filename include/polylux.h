@@ -7,7 +7,8 @@
 #include "polylux/entry_nodejs.h"
 
 #define POLYLUX_ENTRY(name, version_str, function_table)                       \
-  const polylux::info polylux_info{#name, version_str};                        \
+ __attribute__((visibility("default"))) extern const polylux::info polylux_info;                        \
+ __attribute__((visibility("default")))  const polylux::info polylux_info{#name, version_str};                        \
   POLYLUX_ENTRY_PYTHON(name, function_table)                                   \
   POLYLUX_ENTRY_PHP(name, function_table)                                      \
   POLYLUX_ENTRY_NODEJS(name, function_table)

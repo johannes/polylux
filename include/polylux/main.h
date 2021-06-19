@@ -55,5 +55,6 @@ struct info {
   const char *version_str;
 };
 
-extern const polylux::info polylux_info;
 } // namespace polylux
+
+extern const polylux::info polylux_info;
